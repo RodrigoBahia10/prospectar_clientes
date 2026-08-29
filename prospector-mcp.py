@@ -22,8 +22,11 @@ DB = os.path.join(PASTA, 'prospector.db')
 
 CAMPOS = ['slug','nome','nicho','cidade','nota','avaliacoes','email','telefone','whatsapp',
           'siteAntigo','motivo','status','urlNova','dataProposta','valor','obs',
-          'contratoStatus','contratoEm','manutencao','pago','docCliente','endCliente']
+          'contratoStatus','contratoEm','manutencao','pago','docCliente','endCliente',
+          'oferta','canal','score_qualificacao','diagnostico']
 CAMPOS_SET = set(CAMPOS)  # whitelist para validação de nomes de coluna
+OFERTAS_VALIDAS = ['redesign','automacao','saas','app','consultoria']
+CANAIS_VALIDOS  = ['maps','linkedin','manual','indicacao','inbound']
 STATUS_VALIDOS = ['novo','redesenhado','publicado','proposta','respondeu','fechado','descartado']
 
 def conexao():
@@ -34,7 +37,14 @@ def conexao():
         motivo TEXT, status TEXT DEFAULT 'novo', urlNova TEXT, dataProposta TEXT,
         valor REAL, obs TEXT, contratoStatus TEXT DEFAULT 'pendente', contratoEm TEXT,
         manutencao REAL, pago INTEGER DEFAULT 0, docCliente TEXT, endCliente TEXT,
+        oferta TEXT DEFAULT 'redesign', canal TEXT DEFAULT 'maps',
+        score_qualificacao REAL, diagnostico TEXT,
         atualizado TEXT)''')
+    # Migração para bancos existentes: adiciona colunas novas sem quebrar dados antigos
+    for col, tipo in [('oferta',"TEXT DEFAULT 'redesign'"), ('canal',"TEXT DEFAULT 'maps'"),
+                      ('score_qualificacao','REAL'), ('diagnostico','TEXT')]:
+        try: c.execute('ALTER TABLE leads ADD COLUMN %s %s' % (col, tipo))
+        except sqlite3.OperationalError: pass
     c.commit()
     return c
 
@@ -73,14 +83,19 @@ def f_salvar(dados):
         return {'erro': 'slug é obrigatório (ex.: maria-silva)'}
     if dados.get('status') and dados['status'] not in STATUS_VALIDOS:
         return {'erro': 'status inválido. Use: %s' % ', '.join(STATUS_VALIDOS)}
+    if dados.get('oferta') and dados['oferta'] not in OFERTAS_VALIDAS:
+        return {'erro': 'oferta inválida. Use: %s' % ', '.join(OFERTAS_VALIDAS)}
+    if dados.get('canal') and dados['canal'] not in CANAIS_VALIDOS:
+        return {'erro': 'canal inválido. Use: %s' % ', '.join(CANAIS_VALIDOS)}
     atual = f_obter(dados['slug']) or {}
     atual.update({k: v for k, v in dados.items() if k in CAMPOS_SET and v is not None})
-    atual.setdefault('status', 'novo'); atual.setdefault('contratoStatus', 'pendente'); atual.setdefault('pago', 0)
+    atual.setdefault('status', 'novo'); atual.setdefault('contratoStatus', 'pendente')
+    atual.setdefault('pago', 0); atual.setdefault('oferta', 'redesign'); atual.setdefault('canal', 'maps')
     c = conexao()
     c.execute('INSERT OR REPLACE INTO leads (%s,atualizado) VALUES (%s,?)' % (','.join(CAMPOS), ','.join('?'*len(CAMPOS))),
               [atual.get(k) for k in CAMPOS] + [_agora()])
     c.commit(); c.close()
-    return {'ok': True, 'lead': atual['slug'], 'status': atual['status']}
+    return {'ok': True, 'lead': atual['slug'], 'status': atual['status'], 'oferta': atual['oferta']}
 
 def f_status(slug, status, obs_extra=None):
     if status not in STATUS_VALIDOS:
@@ -137,13 +152,22 @@ def f_dashboard():
     open(os.path.join(PASTA, 'dashboard.html'), 'w', encoding='utf-8').write(novo)
     return {'ok': True, 'leads': len(f_listar())}
 
-def f_exportar_csv(status=None):
-    """Exporta leads para CSV na pasta do projeto. Retorna caminho do arquivo gerado."""
+def f_exportar_csv(status=None, oferta=None):
+    """Exporta leads para CSV na pasta do projeto. Filtra por status e/ou oferta."""
     ts = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     sufixo = ('-%s' % status) if status else ''
+    if oferta: sufixo += ('-%s' % oferta)
     nome_arquivo = 'prospector-export%s-%s.csv' % (sufixo, ts)
     caminho = os.path.join(PASTA, nome_arquivo)
-    leads = f_listar(status)
+    # Filtrar por status e/ou oferta
+    c = conexao(); cur = c.cursor()
+    cols = ','.join(_col_valida(k) for k in CAMPOS)
+    conds, vals = [], []
+    if status:  conds.append('status=?');  vals.append(status)
+    if oferta:  conds.append('oferta=?');  vals.append(oferta)
+    where = ('WHERE ' + ' AND '.join(conds)) if conds else ''
+    cur.execute('SELECT %s FROM leads %s ORDER BY status, nome' % (cols, where), vals)
+    leads = _linhas(cur.fetchall(), CAMPOS); c.close()
     if not leads:
         return {'erro': 'Nenhum lead encontrado', 'total': 0}
     with open(caminho, 'w', newline='', encoding='utf-8-sig') as f:
@@ -290,11 +314,39 @@ def regenerar_dashboard() -> str:
     return json.dumps(f_dashboard(), ensure_ascii=False)
 
 @mcp.tool()
-def exportar_csv(status: str = '') -> str:
-    """Exporta os leads do CRM para um arquivo CSV na pasta do projeto (encoding UTF-8 com BOM para Excel).
-    Opcional: filtrar por status (novo, redesenhado, publicado, proposta, respondeu, fechado, descartado).
-    Retorna o caminho do arquivo gerado e o total de leads exportados."""
-    return json.dumps(f_exportar_csv(status or None), ensure_ascii=False)
+def exportar_csv(status: str = '', oferta: str = '') -> str:
+    """Exporta os leads do CRM para um arquivo CSV na pasta do projeto (UTF-8 BOM, compatível com Excel).
+    Filtros opcionais: status (novo/redesenhado/publicado/proposta/respondeu/fechado/descartado)
+    e oferta (redesign/automacao/saas/app/consultoria). Podem ser combinados."""
+    return json.dumps(f_exportar_csv(status or None, oferta or None), ensure_ascii=False)
+
+@mcp.tool()
+def salvar_qualificacao(slug: str, score: float, diagnostico: str, oferta: str = '') -> str:
+    """Salva o resultado da qualificação automática de um lead: score (0-10) e diagnóstico textual.
+    Opcional: atualizar o tipo de oferta (redesign/automacao/saas/app/consultoria).
+    Use após rodar a skill de qualificação correspondente (qualificacao-automacao, qualificacao-saas, etc.)."""
+    dados = {'slug': slug, 'score_qualificacao': score, 'diagnostico': diagnostico}
+    if oferta: dados['oferta'] = oferta
+    lead = f_obter(slug)
+    if not lead: return json.dumps({'erro': 'lead não encontrado: %s' % slug}, ensure_ascii=False)
+    c = conexao()
+    sets = [k for k in dados if k != 'slug' and k in CAMPOS_SET]
+    c.execute('UPDATE leads SET %s, atualizado=? WHERE slug=?' %
+              ','.join('%s=?' % k for k in sets),
+              [dados[k] for k in sets] + [_agora(), slug])
+    c.commit(); c.close()
+    return json.dumps({'ok': True, 'lead': slug, 'score': score}, ensure_ascii=False)
+
+@mcp.tool()
+def listar_por_oferta(oferta: str) -> str:
+    """Lista todos os leads de um tipo específico de oferta: redesign, automacao, saas, app ou consultoria."""
+    if oferta not in OFERTAS_VALIDAS:
+        return json.dumps({'erro': 'oferta inválida. Use: %s' % ', '.join(OFERTAS_VALIDAS)}, ensure_ascii=False)
+    c = conexao(); cur = c.cursor()
+    cols = ','.join(_col_valida(k) for k in CAMPOS)
+    cur.execute('SELECT %s FROM leads WHERE oferta=? ORDER BY score_qualificacao DESC, nome' % cols, (oferta,))
+    r = _linhas(cur.fetchall(), CAMPOS); c.close()
+    return json.dumps(r, ensure_ascii=False)
 
 @mcp.tool()
 def pontuar_site(url: str) -> str:

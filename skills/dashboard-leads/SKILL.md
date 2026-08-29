@@ -18,7 +18,7 @@ Arquitetura na RAIZ da pasta conectada:
 3. Gere o `dashboard.html` a partir de `references/dashboard-template.html` substituindo `__DADOS__` pelo snapshot JSON.
 4. Diga ao usuário: "duplo clique em `iniciar-dashboard.bat` abre o painel com o banco conectado" (requer Python instalado no Windows — se não tiver, o dashboard.html funciona no modo arquivo).
 
-## Schema do banco
+## Schema do banco (Prospector Pro v2)
 
 ```sql
 CREATE TABLE IF NOT EXISTS leads(
@@ -27,10 +27,18 @@ CREATE TABLE IF NOT EXISTS leads(
   status TEXT DEFAULT 'novo', urlNova TEXT, dataProposta TEXT, valor REAL, obs TEXT,
   contratoStatus TEXT DEFAULT 'pendente', contratoEm TEXT, manutencao REAL, pago INTEGER DEFAULT 0,
   docCliente TEXT, endCliente TEXT,
+  -- Campos multi-oferta (v2):
+  oferta TEXT DEFAULT 'redesign',   -- redesign | automacao | saas | app | consultoria
+  canal  TEXT DEFAULT 'maps',        -- maps | linkedin | manual | indicacao | inbound
+  score_qualificacao REAL,           -- 0-10, gerado pelas skills de qualificação
+  diagnostico TEXT,                  -- texto livre do diagnóstico automatizado
   atualizado TEXT DEFAULT (datetime('now','localtime')));
 ```
 
-Status: `novo | redesenhado | publicado | proposta | respondeu | fechado | descartado`. `slug` é a chave.
+> **Bancos existentes (v1):** o `prospector-mcp.py` adiciona os 4 campos novos automaticamente via `ALTER TABLE` ao iniciar — sem perda de dados.
+
+Status válidos: `novo | redesenhado | publicado | proposta | respondeu | fechado | descartado`. `slug` é a chave primária.
+
 
 ## Como os comandos atualizam (SEMPRE os 2 passos)
 

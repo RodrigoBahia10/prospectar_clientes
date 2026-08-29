@@ -1,9 +1,28 @@
 ---
 name: proposta-gmail
-description: Esta skill deve ser usada ao escrever e enviar a proposta comercial por e-mail para um lead prospectado — e-mail de apresentação da nova versão do site, com rapport e sem preço. Acione quando o usuário disser "enviar proposta", "e-mail para o cliente", "mandar o site para o cliente" ou pedir para enviar a proposta (skill proposta-gmail).
+description: Roteador de propostas comerciais — detecta o tipo de oferta do lead no CRM e direciona para a skill de proposta correta. Acione quando o usuário disser "envia proposta", "manda o e-mail", "proposta para [empresa]" sem especificar o tipo. Para tipos específicos, o Antigravity chama diretamente proposta-automacao, proposta-saas, proposta-app ou proposta-consultoria.
 ---
 
-# Proposta por e-mail
+# Proposta por e-mail — Roteador
+
+## 1. Detectar o tipo de oferta
+
+Carregar o lead via `obter_lead(slug)` e ler o campo `oferta`:
+
+| `oferta` | Skill a acionar |
+|----------|-----------------|
+| `redesign` | Continuar nesta skill (fluxo abaixo) |
+| `automacao` | Delegar para `proposta-automacao` |
+| `saas` | Delegar para `proposta-saas` |
+| `app` | Delegar para `proposta-app` |
+| `consultoria` | Delegar para `proposta-consultoria` |
+
+Se `oferta` estiver vazio ou for `redesign`, seguir o fluxo desta skill.
+Se for outro tipo, avisar o usuário que está seguindo o fluxo correto para aquela oferta e usar a skill correspondente.
+
+---
+
+# Proposta de redesign de site (oferta: redesign)
 
 O e-mail NÃO vende — ele desperta curiosidade e prova trabalho feito. O fechamento (preço, escopo, reunião) acontece na resposta. Um e-mail que parece de vendedor morre no spam; um e-mail que parece de uma pessoa que já trabalhou de graça pro destinatário é aberto e respondido.
 

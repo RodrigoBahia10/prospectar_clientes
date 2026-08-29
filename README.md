@@ -1,81 +1,162 @@
-# Prospector de Sites — Plugin para Google Antigravity
+# Prospector Pro — Plugin para Google Antigravity
 
-Prospecção semiautomática de clientes com site fraco, redesign premium, publicação na HostGator e proposta por e-mail — empacotado como **Plugin do Antigravity** (Agy 2.0 / IDE / CLI compartilham a mesma config).
+Plataforma de prospecção semiautomática multi-oferta empacotada como **Plugin do Antigravity** (Agy 2.0 / IDE / CLI compartilham a mesma config).
 
-É a mesma lógica da versão Claude, no formato nativo do Antigravity: um **plugin** (`plugin.json` + `mcp_config.json` + `skills/`). A busca de negócios usa o plugin oficial **Google Maps Platform** (Places); o navegador entra só pra avaliar o site do lead.
+Suporta **5 tipos de oferta** × **3 canais de prospecção** com um CRM unificado, dashboard local, propostas anti-spam por e-mail e geração de contratos.
+
+---
+
+## Tipos de oferta suportados
+
+| Oferta | O que vende | Canal principal |
+|--------|-------------|-----------------|
+| `redesign` | Redesign premium de sites | Google Maps |
+| `automacao` | Automações (n8n, Make, Zapier, Python) | Maps + LinkedIn |
+| `saas` | Produto digital com recorrência | LinkedIn |
+| `app` | Aplicativo mobile ou web customizado | LinkedIn + Maps |
+| `consultoria` | Diagnóstico e consultoria de processos | LinkedIn + indicação |
+
+---
 
 ## Estrutura do plugin
 
 ```
-prospector-de-sites/          ← esta é a pasta do plugin
-├── plugin.json               marcador do plugin
-├── mcp_config.json           define os MCP (CRM + navegador Playwright)
-├── prospector-mcp.py         servidor MCP do CRM (SQLite)
-├── skills/                   as 7 skills (SKILL.md)
-│   ├── prospector-setup/
-│   ├── prospeccao-maps/
-│   ├── redesign-premium/
-│   ├── proposta-gmail/
-│   ├── deploy-hostgator/
-│   ├── dashboard-leads/
-│   └── contrato-servico/
-└── dashboard/                painel local (Python/SQLite)
+prospector-pro/
+├── plugin.json               marcador do plugin (nome: prospector-pro)
+├── mcp_config.json           MCP servers: CRM (SQLite) + navegador Playwright
+├── prospector-mcp.py         servidor MCP do CRM
+├── dashboard/                painel local (Python + SQLite)
+│   ├── dashboard-server.py   servidor HTTP local (porta 8765)
+│   ├── dashboard-template.html
+│   └── iniciar-dashboard.*   iniciadores Windows/Mac
+└── skills/
+    ├── prospector-setup/         configuração inicial (multi-oferta)
+    │
+    ├── [CANAIS DE PROSPECÇÃO]
+    ├── prospeccao-maps/          Google Maps Platform + Playwright
+    ├── prospeccao-linkedin/      LinkedIn via Playwright
+    ├── prospeccao-manual/        entrada manual de leads
+    │
+    ├── [QUALIFICAÇÃO POR OFERTA — usa ferramentas automáticas]
+    ├── qualificacao-automacao/   detecta processos manuais + gera ROI
+    ├── qualificacao-saas/        analisa fit de mercado + sinais de produto
+    ├── qualificacao-app/         detecta operações mobile não digitalizadas
+    ├── qualificacao-consultoria/ gera roteiro de entrevista de diagnóstico
+    │
+    ├── [ENTREGÁVEIS]
+    ├── redesign-premium/         redesign HTML premium (oferta redesign)
+    ├── deploy-hostgator/         publicação FTP/cPanel (oferta redesign)
+    │
+    ├── [PROPOSTAS POR OFERTA]
+    ├── proposta-gmail/           roteador anti-spam (detecta oferta → direciona)
+    ├── proposta-automacao/       proposta + diagnóstico de ROI
+    ├── proposta-saas/            proposta + demo/trial
+    ├── proposta-app/             proposta + escopo básico
+    ├── proposta-consultoria/     proposta de diagnóstico pago
+    │
+    ├── [PÓS-VENDA]
+    ├── follow-up-proposta/       follow-up único por lead (regras anti-spam)
+    ├── contrato-servico/         contrato parametrizável por tipo de serviço
+    └── dashboard-leads/          CRM, kanban, financeiro, exportação
 ```
+
+---
 
 ## Instalação
 
 ### 1. Instalar o plugin
 
-Copie a pasta `prospector-de-sites/` inteira para um dos locais que o Antigravity varre:
+Copie a pasta inteira para um dos locais que o Antigravity varre:
 
-- **Global (todos os projetos):** `~/.gemini/config/plugins/prospector-de-sites/`
-  (no Windows: `C:\Users\SEU_USUARIO\.gemini\config\plugins\prospector-de-sites\`)
-- **Só no projeto atual:** `.agents/plugins/prospector-de-sites/` na raiz do workspace aberto.
+- **Global (todos os projetos):** `~/.gemini/config/plugins/prospector-pro/`
+- **Só no projeto atual:** `.agents/plugins/prospector-pro/` na raiz do workspace.
 
-> Se a pasta `~/.gemini/config/plugins/` não existir ainda, crie ela. (Foi o erro "cannot find the path specified" que apareceu ao baixar um plugin bundled — o Antigravity espera essa pasta existir.)
+> Se a pasta `plugins/` não existir, crie-a. O Antigravity espera essa estrutura.
 
-As **skills** carregam sozinhas — não precisa copiar nada pra `~/.gemini/skills` na mão.
+### 2. Ajustar o `mcp_config.json`
 
-### 2. Ajustar o `mcp_config.json` do plugin
+Abra `mcp_config.json` e corrija os caminhos do `prospector-crm`:
+- Caminho do `prospector-mcp.py`
+- `--pasta` = pasta do seu projeto (onde ficam `prospector.db` e os sites)
 
-Abra `prospector-de-sites/mcp_config.json` e corrija os dois caminhos do `prospector-crm`:
+### 3. Plugin Google Maps Platform (para prospecção via Maps)
 
-- o caminho do `prospector-mcp.py` (dentro da pasta do plugin);
-- o `--pasta` = a pasta do seu projeto (onde ficam `prospector.db`, os leads e os sites).
+Em **Settings → Customizations → Build with Google**, instale o plugin **Google Maps Platform**. Precisa de uma API key do Maps Platform (cota grátis mensal).
 
-O Antigravity lê esse `mcp_config.json` do plugin automaticamente. Se preferir, dá pra adicionar/gerenciar os MCP pela interface: **Settings → Permissions → MCP Tools → Add** (nome + servidor).
+### 4. Configurar o Prospector Pro
 
-### 3. Instalar o plugin Google Maps Platform (a fonte da prospecção)
+No chat: **"configurar o prospector"** → a skill `prospector-setup` coleta suas ofertas, canais, dados de assinatura e instala o painel local.
 
-Em **Settings → Customizations → Build with Google**, baixe o plugin **Google Maps Platform**. Ele dá as ferramentas de Places (buscar negócios, ler nota, nº de avaliações, site, telefone) que a skill `prospeccao-maps` usa. Precisa de uma **API key do Google Maps Platform** (tem cota grátis mensal).
-
-> Sem o plugin do Maps, a prospecção ainda funciona no modo navegador (raspando o Google Maps pelo Playwright) — só é menos confiável.
-
-### 4. Configurar o Prospector
-
-Abra a pasta do projeto e diga no chat: **"configurar o prospector"**. A skill `prospector-setup` coleta seus dados, a conexão HostGator e instala o painel local.
+---
 
 ## Como usar (linguagem natural)
 
-1. **"prospecta nutricionistas em São Paulo"** → busca no Google Maps Platform, qualifica (nota alta + site ruim + e-mail) e monta o dashboard.
-2. **"redesenha os 5 melhores"** → redesign premium + editor + comparador antes/depois.
-3. **"publica na HostGator"** → sobe as páginas e a capa, verifica HTTPS.
-4. **"manda a proposta"** → rascunho anti-spam no Gmail.
-5. Depois: contrato, e o `dashboard.html` administra tudo (kanban + financeiro).
+### Redesign de sites
+1. `"prospecta nutricionistas em São Paulo"` → Maps → qualificação de site → dashboard
+2. `"redesenha os 5 melhores"` → redesign premium + editor + comparador
+3. `"publica na HostGator"` → FTP/cPanel + verificação HTTPS
+4. `"manda a proposta"` → e-mail anti-spam com capa antes/depois
 
-## Diferenças pra versão Claude
+### Automações
+1. `"prospecta clínicas no LinkedIn para automação"` → Playwright → qualificação de processo
+2. `"qualifica a Clínica X para automação"` → detecta processos manuais + gera diagnóstico de ROI
+3. `"manda proposta de automação para a Clínica X"` → e-mail com diagnóstico + CTA de reunião
 
-| | Claude Cowork | Antigravity |
+### SaaS / App / Consultoria
+- `"prospecta empresas de logística para SaaS no LinkedIn"` → qualificação de fit
+- `"qualifica a Empresa Y para consultoria"` → gera roteiro de entrevista
+- `"manda proposta de consultoria para a Empresa Y"` → proposta de diagnóstico pago
+
+### CRM e pipeline
+- `"quem está aguardando proposta há mais de 3 dias?"` → follow-up automático
+- `"mostra o financeiro"` → total fechado, MRR, projeção 12 meses
+- `"exporta os leads de automação para CSV"` → arquivo pronto para Excel
+
+---
+
+## Tools MCP disponíveis (prospector-crm)
+
+| Tool | Descrição |
+|------|-----------|
+| `listar_leads(status)` | Lista todos ou por status |
+| `listar_por_oferta(oferta)` | Lista por tipo de oferta |
+| `obter_lead(slug)` | Dados completos de um lead |
+| `salvar_lead(...)` | Cria ou atualiza lead |
+| `salvar_qualificacao(slug, score, diagnostico)` | Salva resultado da qualificação |
+| `atualizar_status(slug, status)` | Move no funil |
+| `registrar_fechamento(slug, valor)` | Fecha negócio |
+| `followups_pendentes(dias)` | Leads aguardando follow-up |
+| `registrar_followup(slug)` | Marca follow-up enviado |
+| `resumo_financeiro()` | Painel financeiro |
+| `regenerar_dashboard()` | Atualiza dashboard.html |
+| `exportar_csv(status, oferta)` | Exporta para CSV |
+| `pontuar_site(url)` | Pré-qualifica site automaticamente |
+
+---
+
+## Campos do CRM
+
+Além dos campos básicos (nome, e-mail, telefone, WhatsApp, etc.), o banco inclui:
+
+| Campo | Descrição |
+|-------|-----------|
+| `oferta` | redesign / automacao / saas / app / consultoria |
+| `canal` | maps / linkedin / manual / indicacao / inbound |
+| `score_qualificacao` | 0–10 (gerado pela skill de qualificação) |
+| `diagnostico` | Diagnóstico textual da qualificação automatizada |
+
+---
+
+## Diferenças em relação à versão original
+
+| | Prospector de Sites (v1) | Prospector Pro (v2) |
 |---|---|---|
-| Empacotamento | plugin (.claude-plugin) | plugin (`plugin.json` + `mcp_config.json` + `skills/`) |
-| Onde instala | marketplace | `~/.gemini/config/plugins/` (ou `.agents/plugins/`) |
-| Comandos | `/prospectar`… | linguagem natural aciona a skill |
-| Busca no Maps | Claude in Chrome | **plugin Google Maps Platform** (Places) + navegador |
-| Navegador | Claude in Chrome | MCP Playwright / plugin Chrome DevTools |
-| CRM | MCP stdio | mesmo MCP, no `mcp_config.json` do plugin |
-| E-mail | conector Gmail | plugin/MCP Gmail do Google, ou link de compose |
-
-Mesma lógica, mesmos entregáveis. O CRM (`prospector-mcp.py`), o painel e as templates são reaproveitados sem mudança.
+| Ofertas | Redesign de sites | 5 ofertas |
+| Canais | Google Maps | Maps + LinkedIn + Manual |
+| Qualificação | Visual (site ruim) | Automatizada por oferta |
+| Propostas | 1 template | 1 por tipo de oferta |
+| CRM | 22 campos | 26 campos (+oferta, canal, score, diagnóstico) |
+| Distribuição | Uso próprio | Produto para freelancers e agências |
 
 ---
 

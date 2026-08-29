@@ -1,11 +1,19 @@
 ---
 name: contrato-servico
-description: Esta skill deve ser usada ao gerar contratos de prestação de serviço para clientes fechados — criação/redesign de site, publicação e manutenção. Acione quando o usuário disser "contrato", "gerar contrato", "formalizar", "cliente fechou", "enviar contrato" ou pedir o contrato (skill contrato-servico).
+description: Esta skill deve ser usada para gerar contratos de prestação de serviço para qualquer tipo de oferta (redesign, automação, SaaS, app, consultoria). Acione quando o usuário disser "contrato", "gerar contrato", "formalizar", "cliente fechou", "enviar contrato".
 ---
 
 # Contrato de prestação de serviço
 
-Gerar a minuta do contrato do serviço fechado (redesign + publicação de página, com manutenção opcional), pronta pra virar PDF e ir por e-mail.
+Gerar a minuta do contrato para o serviço fechado — adaptável a qualquer tipo de oferta: redesign de site, automação, SaaS/produto, aplicativo ou consultoria.
+
+## Detectar o tipo de oferta
+
+Carregar o lead via `obter_lead(slug)` e ler `oferta`. O tipo de oferta determina:
+- O **entregável** descrito no contrato (página web / automação implantada / licença SaaS / aplicativo / relatório de diagnóstico)
+- As **cláusulas de aceite** (publicação no ar / fluxo em produção / acesso ao sistema / entrega do app / entrega do relatório)
+- O **valor de manutenção** (mensal para redesign e SaaS; eventual para automação e app; por projeto para consultoria)
+
 
 ## Fonte dos dados (nesta ordem)
 
