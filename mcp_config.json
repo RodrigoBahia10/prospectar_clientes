@@ -1,11 +1,11 @@
 {
   "mcpServers": {
     "prospector-crm": {
-      "command": "python",
+      "command": "python3",
       "args": [
-        "C:/Users/SEU_USUARIO/.gemini/config/plugins/prospector-de-sites/prospector-mcp.py",
+        "/home/rodrigo/prospectar_clientes/prospector-mcp.py",
         "--pasta",
-        "C:/CAMINHO/DA/PASTA/DO/PROJETO"
+        "/home/rodrigo/prospectar_clientes"
       ]
     },
     "playwright": {
