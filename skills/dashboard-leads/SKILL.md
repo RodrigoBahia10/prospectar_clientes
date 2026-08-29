@@ -54,3 +54,31 @@ Se o banco não existir ainda (usuário antigo), crie-o e importe os leads do sn
 ## O que o painel faz sozinho (não reimplementar)
 
 Kanban drag & drop, edição em modal, exclusão, busca, paginação automática, funil, follow-ups (proposta 4+ dias), receita fechada/potencial, vista Contratos (status pendente/enviado/assinado + link do documento + pago) e vista Financeiro (recebido, a receber, MRR de manutenções, projeção 12 meses) — tudo no template. O plugin só mantém o BANCO correto e o snapshot em dia.
+
+## Exportação de pipeline
+
+Há três formas de exportar os leads para fora do sistema:
+
+### CSV via MCP (pelo agente)
+
+Chamar `exportar_csv()` do MCP `prospector-crm`. Gera um arquivo `.csv` (UTF-8 com BOM, compatível com Excel) na pasta do projeto e retorna o caminho. Pode filtrar por status: `exportar_csv(status="proposta")`.
+
+```
+exportar_csv()             → todos os leads
+exportar_csv(status="fechado") → só clientes fechados
+```
+
+### CSV via navegador (pelo servidor local)
+
+Se o servidor estiver rodando (`http://localhost:8765`), acessar:
+
+```
+http://localhost:8765/api/export
+```
+
+O navegador baixa o arquivo `prospector-leads.csv` automaticamente. Ideal para o usuário exportar sem precisar do agente.
+
+### PDF (relatório visual)
+
+Abrir o dashboard em `http://localhost:8765` no navegador → `Ctrl+P` (ou `Cmd+P` no Mac) → selecionar **"Salvar como PDF"**. O dashboard já tem CSS de impressão otimizado para gerar um relatório de pipeline limpo.
+

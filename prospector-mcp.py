@@ -5,12 +5,12 @@ Prospector de Sites — servidor MCP do CRM (STDIO)
 Funciona no ChatGPT (Work/Codex) e no Claude (Desktop/Cowork) ao mesmo tempo,
 por cima do MESMO prospector.db do dashboard.
 
-Instalação:  pip install "mcp[cli]"
-Execução:    python prospector-mcp.py            (usa a pasta atual)
-             python prospector-mcp.py --pasta "C:\\Users\\voce\\Desktop\\Clientes"
-Teste local: python prospector-mcp.py --teste
+Instalação:  pip install "mcp[cli]<2"   ← ATENÇÃO: mcp>=2 renomeou FastMCP; pin <2 obrigatório
+Execução:    python3 prospector-mcp.py            (usa a pasta atual)
+             python3 prospector-mcp.py --pasta "/home/usuario/meu-projeto"
+Teste local: python3 prospector-mcp.py --teste
 """
-import argparse, json, os, sqlite3, sys, datetime
+import argparse, csv, json, os, sqlite3, sys, datetime, time, urllib.request, urllib.error
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--pasta', default=os.environ.get('PROSPECTOR_DIR', '.'),
@@ -23,6 +23,7 @@ DB = os.path.join(PASTA, 'prospector.db')
 CAMPOS = ['slug','nome','nicho','cidade','nota','avaliacoes','email','telefone','whatsapp',
           'siteAntigo','motivo','status','urlNova','dataProposta','valor','obs',
           'contratoStatus','contratoEm','manutencao','pago','docCliente','endCliente']
+CAMPOS_SET = set(CAMPOS)  # whitelist para validação de nomes de coluna
 STATUS_VALIDOS = ['novo','redesenhado','publicado','proposta','respondeu','fechado','descartado']
 
 def conexao():
@@ -43,19 +44,27 @@ def _linhas(rows, cols):
 def _agora():
     return datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
 
+def _col_valida(nome):
+    """Valida nome de coluna contra whitelist. Levanta ValueError se não reconhecido."""
+    if nome not in CAMPOS_SET:
+        raise ValueError('Coluna inválida: %s' % nome)
+    return nome
+
 # ---------- Lógica (compartilhada entre MCP e autoteste) ----------
 
 def f_listar(status=None):
     c = conexao(); cur = c.cursor()
+    cols = ','.join(_col_valida(k) for k in CAMPOS)
     if status:
-        cur.execute('SELECT %s FROM leads WHERE status=? ORDER BY nome' % ','.join(CAMPOS), (status,))
+        cur.execute('SELECT %s FROM leads WHERE status=? ORDER BY nome' % cols, (status,))
     else:
-        cur.execute('SELECT %s FROM leads ORDER BY status, nome' % ','.join(CAMPOS))
+        cur.execute('SELECT %s FROM leads ORDER BY status, nome' % cols)
     r = _linhas(cur.fetchall(), CAMPOS); c.close(); return r
 
 def f_obter(slug):
     c = conexao(); cur = c.cursor()
-    cur.execute('SELECT %s FROM leads WHERE slug=?' % ','.join(CAMPOS), (slug,))
+    cols = ','.join(_col_valida(k) for k in CAMPOS)
+    cur.execute('SELECT %s FROM leads WHERE slug=?' % cols, (slug,))
     row = cur.fetchone(); c.close()
     return dict(zip(CAMPOS, row)) if row else None
 
@@ -65,7 +74,7 @@ def f_salvar(dados):
     if dados.get('status') and dados['status'] not in STATUS_VALIDOS:
         return {'erro': 'status inválido. Use: %s' % ', '.join(STATUS_VALIDOS)}
     atual = f_obter(dados['slug']) or {}
-    atual.update({k: v for k, v in dados.items() if k in CAMPOS and v is not None})
+    atual.update({k: v for k, v in dados.items() if k in CAMPOS_SET and v is not None})
     atual.setdefault('status', 'novo'); atual.setdefault('contratoStatus', 'pendente'); atual.setdefault('pago', 0)
     c = conexao()
     c.execute('INSERT OR REPLACE INTO leads (%s,atualizado) VALUES (%s,?)' % (','.join(CAMPOS), ','.join('?'*len(CAMPOS))),
@@ -128,6 +137,88 @@ def f_dashboard():
     open(os.path.join(PASTA, 'dashboard.html'), 'w', encoding='utf-8').write(novo)
     return {'ok': True, 'leads': len(f_listar())}
 
+def f_exportar_csv(status=None):
+    """Exporta leads para CSV na pasta do projeto. Retorna caminho do arquivo gerado."""
+    ts = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    sufixo = ('-%s' % status) if status else ''
+    nome_arquivo = 'prospector-export%s-%s.csv' % (sufixo, ts)
+    caminho = os.path.join(PASTA, nome_arquivo)
+    leads = f_listar(status)
+    if not leads:
+        return {'erro': 'Nenhum lead encontrado', 'total': 0}
+    with open(caminho, 'w', newline='', encoding='utf-8-sig') as f:
+        writer = csv.DictWriter(f, fieldnames=CAMPOS, extrasaction='ignore')
+        writer.writeheader()
+        writer.writerows(leads)
+    return {'ok': True, 'arquivo': caminho, 'total': len(leads)}
+
+def f_pontuar_site(url):
+    """
+    Pré-qualifica um site automaticamente sem abrir o navegador.
+    Usa apenas stdlib Python (urllib). Retorna score e lista de problemas.
+    score 0 = site parece adequado; score >= 2 = candidato forte para redesign.
+    """
+    problemas = []
+    if not url.startswith('http'):
+        url = 'https://' + url
+
+    # 1. Verificar HTTPS e tempo de resposta
+    t0 = time.time()
+    html = ''
+    url_final = url
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={'User-Agent': 'Mozilla/5.0 (compatible; ProspectorBot/1.0)'}
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            url_final = resp.url
+            html = resp.read(65536).decode('utf-8', errors='ignore')
+            tempo_ms = int((time.time() - t0) * 1000)
+            if not url_final.startswith('https://'):
+                problemas.append('Sem HTTPS — site serve em HTTP (inseguro, penalizado pelo Google)')
+            if tempo_ms > 3000:
+                problemas.append('Lento — resposta em %dms (>3s penaliza ranking e conversão)' % tempo_ms)
+    except urllib.error.URLError as e:
+        return {'score': 5, 'classificacao': 'inacessível',
+                'problemas': ['Site inacessível: %s' % str(e)], 'url_final': url}
+    except Exception as e:
+        return {'score': 5, 'classificacao': 'erro',
+                'problemas': ['Erro ao acessar o site: %s' % str(e)], 'url_final': url}
+
+    # 2. Redireciona para rede social (não tem site próprio)
+    for rede in ['instagram.com', 'facebook.com', 'linktr.ee', 'linktree.com', 'bio.link']:
+        if rede in url_final:
+            problemas.append('Site redireciona para %s — não tem página própria' % rede)
+            break
+
+    html_lower = html.lower()
+
+    # 3. Sem viewport meta (provavelmente não é responsivo)
+    if 'name="viewport"' not in html_lower and "name='viewport'" not in html_lower:
+        problemas.append('Sem meta viewport — provavelmente não é responsivo no celular')
+
+    # 4. Sem WhatsApp
+    if 'wa.me' not in html_lower and 'api.whatsapp.com' not in html_lower and 'whatsapp' not in html_lower:
+        problemas.append('Sem link de WhatsApp — nenhum CTA direto de contato')
+
+    # 5. Plataformas gratuitas / subdomínios de terceiros
+    for plataforma in ['wixsite.com', 'sites.google.com', 'webnode.com.br', 'jimdo.com',
+                       'weebly.com', 'blogspot.com', 'wordpress.com']:
+        if plataforma in url_final:
+            problemas.append('Plataforma gratuita (%s) — domínio de terceiro' % plataforma)
+            break
+
+    score = len(problemas)
+    if score >= 2:
+        classi = 'site ruim — candidato forte'
+    elif score == 1:
+        classi = 'site com problema pontual'
+    else:
+        classi = 'site parece adequado'
+
+    return {'score': score, 'classificacao': classi, 'problemas': problemas, 'url_final': url_final}
+
 # ---------- Autoteste ----------
 if ARGS.teste:
     import tempfile
@@ -141,6 +232,8 @@ if ARGS.teste:
     print('5 fechar:', f_fechar('teste-mcp', 700, 100))
     print('6 financeiro:', f_financeiro())
     print('7 status inválido (deve dar erro):', f_status('teste-mcp','banana'))
+    print('8 exportar_csv:', f_exportar_csv())
+    print('9 pontuar_site (wix = ruim):', f_pontuar_site('http://clinica.wixsite.com/saude'))
     print('AUTOTESTE OK')
     sys.exit(0)
 
@@ -195,6 +288,22 @@ def resumo_financeiro() -> str:
 def regenerar_dashboard() -> str:
     """Regenera o dashboard.html (painel visual) com os dados atuais do banco. Use ao final de qualquer sequência de alterações."""
     return json.dumps(f_dashboard(), ensure_ascii=False)
+
+@mcp.tool()
+def exportar_csv(status: str = '') -> str:
+    """Exporta os leads do CRM para um arquivo CSV na pasta do projeto (encoding UTF-8 com BOM para Excel).
+    Opcional: filtrar por status (novo, redesenhado, publicado, proposta, respondeu, fechado, descartado).
+    Retorna o caminho do arquivo gerado e o total de leads exportados."""
+    return json.dumps(f_exportar_csv(status or None), ensure_ascii=False)
+
+@mcp.tool()
+def pontuar_site(url: str) -> str:
+    """Pré-qualifica um site automaticamente SEM abrir o navegador (usa apenas urllib da stdlib).
+    Verifica: HTTPS, tempo de resposta, meta viewport (responsividade), presença de WhatsApp,
+    plataformas gratuitas (Wix, Google Sites...) e redirecionamento para redes sociais.
+    Retorna score (0=site parece adequado, >=2=candidato forte para redesign) e lista de problemas.
+    Use ANTES de abrir o navegador para acelerar a qualificação na prospecção."""
+    return json.dumps(f_pontuar_site(url), ensure_ascii=False)
 
 if __name__ == '__main__':
     mcp.run()

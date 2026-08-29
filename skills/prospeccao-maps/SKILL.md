@@ -15,9 +15,16 @@ A busca dos negócios usa o **plugin Google Maps Platform** (Places), que já ve
    - **Filtro 1 — potencial financeiro**: `rating` ≥ 4.7 E `user_ratings_total` ≥ 40. Reprovou → próximo.
    - **Filtro 2 — TEM site próprio**: precisa de `website` preenchido e que NÃO seja Instagram/Facebook/linktree/diretório de terceiros. Sem site ou só rede social → descartar (registrar o motivo) e seguir.
    > Se o plugin Google Maps Platform não estiver instalado/configurado (precisa de uma API key do Maps Platform), caia para o modo navegador: abra `https://www.google.com/maps`, busque `[nicho] em [cidade]` e leia nota/avaliações/site de cada perfil pelo MCP de navegador (Playwright).
-2. **Avaliar o site + achar o e-mail (navegador):** para cada candidato que passou nos filtros 1 e 2, abra o `website` pelo MCP de navegador e:
-   - **Filtro 3 — site ruim**: avalie pelos critérios abaixo. Site bom → descartar. Site ativo porém ruim → candidato.
+2. **Avaliar o site + achar o e-mail (navegador):** para cada candidato que passou nos filtros 1 e 2, siga os sub-passos abaixo antes de abrir o navegador.
+
+   **Passo 2.5 — Pré-qualificação automática (sem navegador):** chamar a ferramenta `pontuar_site(url)` do MCP `prospector-crm`. Ela verifica HTTPS, velocidade, viewport (responsividade), presença de WhatsApp e plataformas gratuitas, devolvendo um `score` e uma lista de `problemas`.
+   - `score >= 2` → candidato forte. Os `problemas` já alimentam o campo `motivo` do lead — confirmar no navegador e complementar com avaliação visual.
+   - `score == 1` → site tem problema pontual — abrir o navegador para avaliar o critério visual (layout datado, prova social, CTA).
+   - `score == 0` → site parece tecnicamente adequado — **pular o navegador**, descartar o lead com `motivo: "pré-qualificação automática: sem problemas técnicos detectados"` e seguir para o próximo. Economiza o maior custo do fluxo (tempo de navegação).
+
+   **Filtro 3 — site ruim (via navegador, quando necessário):** avalie pelos critérios abaixo. Site bom → descartar. Site ativo porém ruim → candidato.
    - Procure o e-mail público (obrigatório — ver abaixo) e o WhatsApp.
+
 3. Parar ao atingir a meta de leads qualificados (config, padrão 10) ou após avaliar 25 estabelecimentos.
 4. Pular estabelecimentos que já estão em `leads.md` (avaliados em buscas anteriores).
 
