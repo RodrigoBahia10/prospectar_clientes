@@ -3,7 +3,7 @@
 """Prospector — servidor local do dashboard (SQLite). Sem dependências: só Python padrão.
 Uso: python dashboard-server.py  (ou duplo clique em iniciar-dashboard.bat)
 Abre em http://localhost:8765 — edições, exclusões e drag&drop salvam no prospector.db"""
-import json, sqlite3, os, sys, webbrowser
+import csv, io, json, sqlite3, os, sys, webbrowser
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 PASTA = os.path.dirname(os.path.abspath(__file__))
@@ -59,17 +59,34 @@ class App(SimpleHTTPRequestHandler):
     def _corpo(self):
         n = int(self.headers.get('Content-Length', 0))
         return json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+    def _csv_response(self):
+        c = conexao(); c.row_factory = sqlite3.Row
+        rows = [dict(r) for r in c.execute('SELECT * FROM leads ORDER BY status, nome').fetchall()]
+        c.close()
+        buf = io.StringIO()
+        writer = csv.DictWriter(buf, fieldnames=CAMPOS, extrasaction='ignore')
+        writer.writeheader()
+        writer.writerows(rows)
+        corpo = ('\ufeff' + buf.getvalue()).encode('utf-8')  # BOM para Excel
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/csv; charset=utf-8')
+        self.send_header('Content-Disposition', 'attachment; filename="prospector-leads.csv"')
+        self.send_header('Cache-Control', 'no-store')
+        self.send_header('Content-Length', str(len(corpo)))
+        self.end_headers(); self.wfile.write(corpo)
     def do_GET(self):
         if self.path.split('?')[0] == '/api/config':
             cfg = ler_config()
-            hg = dict(cfg.get('hostgator', {}))
+            hg = dict(cfg.get('hospedagem', cfg.get('hostgator', {})))
             hg['senhaDefinida'] = bool(hg.get('senha'))
             hg.pop('senha', None)  # a senha NUNCA sai do arquivo
-            return self._json(200, {'contratante': cfg.get('contratante', {}), 'hostgator': hg})
+            return self._json(200, {'contratante': cfg.get('contratante', {}), 'hospedagem': hg, 'hostgator': hg})
         if self.path.split('?')[0] == '/api/leads':
             c = conexao(); c.row_factory = sqlite3.Row
             rows = [dict(r) for r in c.execute('SELECT * FROM leads').fetchall()]; c.close()
             return self._json(200, rows)
+        if self.path.split('?')[0] == '/api/export':
+            return self._csv_response()
         if self.path in ('/', ''):
             self.path = '/dashboard.html'
         return SimpleHTTPRequestHandler.do_GET(self)
@@ -83,18 +100,20 @@ class App(SimpleHTTPRequestHandler):
     def do_PUT(self):
         if self.path.split('?')[0] == '/api/config':
             cfg = ler_config(); corpo = self._corpo()
-            if 'contratante' in corpo or 'hostgator' in corpo:
+            bloco_hosp = 'hospedagem' if 'hospedagem' in corpo else ('hostgator' if 'hostgator' in corpo else None)
+            if 'contratante' in corpo or bloco_hosp:
                 if 'contratante' in corpo:
                     ct = cfg.get('contratante', {})
                     ct.update({k: v for k, v in corpo['contratante'].items() if isinstance(v, str)})
                     cfg['contratante'] = ct
-                if 'hostgator' in corpo:
-                    hg = cfg.get('hostgator', {})
-                    for k, v in corpo['hostgator'].items():
+                if bloco_hosp:
+                    hg = cfg.get('hospedagem', cfg.get('hostgator', {}))
+                    for k, v in corpo[bloco_hosp].items():
                         if not isinstance(v, str): continue
                         if k == 'senha' and v == '': continue  # em branco = mantém a atual
                         hg[k] = v
-                    cfg['hostgator'] = hg
+                    cfg['hospedagem'] = hg
+                    cfg.pop('hostgator', None)
             else:  # compatibilidade: corpo plano = contratante
                 ct = cfg.get('contratante', {})
                 ct.update({k: v for k, v in corpo.items() if isinstance(v, str)})
@@ -104,7 +123,8 @@ class App(SimpleHTTPRequestHandler):
         partes = self.path.split('?')[0].split('/')
         if len(partes) == 4 and partes[1] == 'api' and partes[2] == 'leads':
             slug, ch = partes[3], self._corpo()
-            sets = [k for k in ch if k in CAMPOS and k != 'slug']
+            # Whitelist explícita: só colunas reconhecidas e nunca 'slug' (chave primária)
+            sets = [k for k in ch if k in set(CAMPOS) and k != 'slug']
             if sets:
                 c = conexao()
                 c.execute('UPDATE leads SET %s, atualizado=datetime("now","localtime") WHERE slug=?' %

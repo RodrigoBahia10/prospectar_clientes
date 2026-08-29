@@ -2,7 +2,7 @@
 
 Plataforma de prospecção semiautomática multi-oferta empacotada como **Plugin do Antigravity** (Agy 2.0 / IDE / CLI compartilham a mesma config).
 
-Suporta **5 tipos de oferta** × **3 canais de prospecção** com um CRM unificado, dashboard local, propostas anti-spam por e-mail e geração de contratos.
+Suporta **6 tipos de oferta** × **3 canais de prospecção** com um CRM unificado, dashboard local, propostas anti-spam por e-mail e geração de contratos.
 
 ---
 
@@ -46,7 +46,7 @@ prospector-pro/
     │
     ├── [ENTREGÁVEIS]
     ├── redesign-premium/         redesign HTML premium (oferta redesign)
-    ├── deploy-hostgator/         publicação FTP/cPanel (oferta redesign)
+    ├── deploy-hospedagem/        publicação Web / cPanel / FTP / VPS (oferta redesign)
     │
     ├── [PROPOSTAS POR OFERTA]
     ├── proposta-gmail/           roteador anti-spam (detecta oferta → direciona)
@@ -95,7 +95,7 @@ No chat: **"configurar o prospector"** → a skill `prospector-setup` coleta sua
 ### Redesign de sites
 1. `"prospecta nutricionistas em São Paulo"` → Maps → qualificação de site → dashboard
 2. `"redesenha os 5 melhores"` → redesign premium + editor + comparador
-3. `"publica na HostGator"` → FTP/cPanel + verificação HTTPS
+3. `"publica na hospedagem"` → upload Web / cPanel / FTP / VPS + verificação HTTPS
 4. `"manda a proposta"` → e-mail anti-spam com capa antes/depois
 
 ### Automações
@@ -152,7 +152,7 @@ Além dos campos básicos (nome, e-mail, telefone, WhatsApp, etc.), o banco incl
 
 | | Prospector de Sites (v1) | Prospector Pro (v2) |
 |---|---|---|
-| Ofertas | Redesign de sites | 5 ofertas |
+| Ofertas | Redesign de sites | 6 ofertas |
 | Canais | Google Maps | Maps + LinkedIn + Manual |
 | Qualificação | Visual (site ruim) | Automatizada por oferta |
 | Propostas | 1 template | 1 por tipo de oferta |

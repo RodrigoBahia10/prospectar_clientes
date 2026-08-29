@@ -1,6 +1,6 @@
 ---
 name: dashboard-leads
-description: Esta skill deve ser usada para criar e ATUALIZAR o dashboard de leads — o painel de controle local (SQLite + página web) onde o usuário administra prospecções, sites, publicações e propostas. Acione sempre que qualquer comando do plugin mudar dados de leads (a skill prospeccao-maps, a skill redesign-premium, a skill deploy-hostgator, a skill proposta-gmail), ou quando o usuário disser "dashboard", "painel", "meus leads", "controle de clientes", "banco de dados de leads".
+description: Esta skill deve ser usada para criar e ATUALIZAR o dashboard de leads — o painel de controle local (SQLite + página web) onde o usuário administra prospecções, sites, publicações e propostas. Acione sempre que qualquer comando do plugin mudar dados de leads (a skill prospeccao-maps, a skill redesign-premium, a skill deploy-hospedagem, a skill proposta-gmail), ou quando o usuário disser "dashboard", "painel", "meus leads", "controle de clientes", "banco de dados de leads".
 ---
 
 # Dashboard de leads (SQLite + página local)

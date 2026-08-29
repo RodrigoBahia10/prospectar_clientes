@@ -28,9 +28,9 @@ Procure `prospector-config.json`. Se existir, mostre um resumo (SEM senhas) e pe
 - **Leads por busca**: padrão 10.
 - **Modo de envio da proposta**: padrão "rascunho no Gmail para revisão".
 
-## 3. Conexão HostGator (só se oferta "redesign" estiver ativa)
+## 3. Conexão de Hospedagem (só se oferta "redesign" estiver ativa)
 
-Se já contratou a hospedagem: **não colete a senha pelo chat**. Oriente a preencher no arquivo ou no dashboard os campos `usuario`, `dominio`, `servidor` e `senha`. A senha vive SÓ no arquivo local.
+Se já contratou a hospedagem (cPanel / FTP / Hostinger / HostGator / VPS): **não colete a senha pelo chat**. Oriente a preencher no arquivo ou no dashboard os campos `servidor`, `usuario`, `senha`, `dominio` e `pastaBase`. A senha vive SÓ no arquivo local.
 
 ## 4. Salvar
 
@@ -46,7 +46,7 @@ Se já contratou a hospedagem: **não colete a senha pelo chat**. Oriente a pree
     "canais": ["maps", "linkedin"]
   },
   "envio": { "modo": "rascunho" },
-  "hostgator": { "usuario": "", "dominio": "", "servidor": "", "senha": "", "pastaBase": "clientes" }
+  "hospedagem": { "usuario": "", "dominio": "", "servidor": "", "senha": "", "pastaBase": "clientes" }
 }
 ```
 
@@ -65,7 +65,7 @@ Siga a skill `dashboard-leads` para instalar o servidor e criar o banco `prospec
 
 Confirme o que foi salvo. Explique o ciclo por oferta:
 
-- **Redesign**: `prospeccao-maps` → `qualificacao-automacao` (pontuar_site) → `redesign-premium` → `deploy-hostgator` → `proposta-gmail`
+- **Redesign**: `prospeccao-maps` → `qualificacao-automacao` (pontuar_site) → `redesign-premium` → `deploy-hospedagem` → `proposta-gmail`
 - **Automação**: `prospeccao-maps` ou `prospeccao-linkedin` → `qualificacao-automacao` → `proposta-automacao`
 - **SaaS/App**: `prospeccao-linkedin` → `qualificacao-saas`/`qualificacao-app` → `proposta-saas`/`proposta-app`
 - **Consultoria**: `prospeccao-linkedin` → `qualificacao-consultoria` → `proposta-consultoria`
