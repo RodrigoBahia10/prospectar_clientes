@@ -16,6 +16,7 @@ Carregar o lead via `obter_lead(slug)` e ler o campo `oferta`:
 | `saas` | Delegar para `proposta-saas` |
 | `app` | Delegar para `proposta-app` |
 | `consultoria` | Delegar para `proposta-consultoria` |
+| `presenca` | Delegar para `proposta-presenca` |
 
 Se `oferta` estiver vazio ou for `redesign`, seguir o fluxo desta skill.
 Se for outro tipo, avisar o usuário que está seguindo o fluxo correto para aquela oferta e usar a skill correspondente.

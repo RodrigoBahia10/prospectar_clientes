@@ -15,6 +15,7 @@ Suporta **5 tipos de oferta** × **3 canais de prospecção** com um CRM unifica
 | `saas` | Produto digital com recorrência | LinkedIn |
 | `app` | Aplicativo mobile ou web customizado | LinkedIn + Maps |
 | `consultoria` | Diagnóstico e consultoria de processos | LinkedIn + indicação |
+| `presenca` | Gestão de redes sociais, GMB, tráfego pago, SEO | Maps + LinkedIn + Manual |
 
 ---
 
@@ -160,4 +161,4 @@ Além dos campos básicos (nome, e-mail, telefone, WhatsApp, etc.), o banco incl
 
 ---
 
-Feito por **Helio Arreche**.
+

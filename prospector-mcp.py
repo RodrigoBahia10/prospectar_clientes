@@ -25,7 +25,7 @@ CAMPOS = ['slug','nome','nicho','cidade','nota','avaliacoes','email','telefone',
           'contratoStatus','contratoEm','manutencao','pago','docCliente','endCliente',
           'oferta','canal','score_qualificacao','diagnostico']
 CAMPOS_SET = set(CAMPOS)  # whitelist para validação de nomes de coluna
-OFERTAS_VALIDAS = ['redesign','automacao','saas','app','consultoria']
+OFERTAS_VALIDAS = ['redesign','automacao','saas','app','consultoria','presenca']
 CANAIS_VALIDOS  = ['maps','linkedin','manual','indicacao','inbound']
 STATUS_VALIDOS = ['novo','redesenhado','publicado','proposta','respondeu','fechado','descartado']
 

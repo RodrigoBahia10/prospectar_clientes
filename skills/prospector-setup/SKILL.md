@@ -20,6 +20,7 @@ Procure `prospector-config.json`. Se existir, mostre um resumo (SEM senhas) e pe
   - `saas` — produto digital com recorrência mensal
   - `app` — aplicativo mobile ou web customizado
   - `consultoria` — diagnóstico e consultoria de processos
+  - `presenca` — gestão de redes sociais, GMB, tráfego pago, SEO (negócios e autônomos)
 - **Oferta padrão**: qual é a principal?
 - **Canais ativos**: Maps (negócios locais), LinkedIn (empresas/profissionais), manual (indicação/inbound)?
 - **Nichos alvo** por oferta (ex.: redesign → nutricionistas; automação → clínicas; consultoria → e-commerce).
@@ -68,5 +69,6 @@ Confirme o que foi salvo. Explique o ciclo por oferta:
 - **Automação**: `prospeccao-maps` ou `prospeccao-linkedin` → `qualificacao-automacao` → `proposta-automacao`
 - **SaaS/App**: `prospeccao-linkedin` → `qualificacao-saas`/`qualificacao-app` → `proposta-saas`/`proposta-app`
 - **Consultoria**: `prospeccao-linkedin` → `qualificacao-consultoria` → `proposta-consultoria`
+- **Presença digital**: `prospeccao-maps` (negócios locais) ou `prospeccao-linkedin` (autônomos) → `qualificacao-presenca` → `proposta-presenca`
 
 Em todos os casos: `follow-up-proposta` → `contrato-servico` → `dashboard-leads` como painel central.
